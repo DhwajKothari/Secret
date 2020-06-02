@@ -5,7 +5,7 @@ const bodyParser=require("body-parser");
 const ejs=require("ejs");
 const app=express();
 const mongoose=require("mongoose");
-const encrypt=require("mongoose-encryption");
+const md5 =require("md5");
 
 app.use(express.static("public"));
 app.set("view engine","ejs");
@@ -34,7 +34,7 @@ app.route("/login")
     {email:req.body.username},
     function(err,foundUser){
       if(!err){
-        if(foundUser.password===req.body.password){
+        if(foundUser.password===md5(req.body.password)){
           res.render("secrets");
         }
       }
@@ -55,7 +55,7 @@ app.route("/register")
     else{
       const newUser=new User({
         email:req.body.username,
-        password:req.body.password
+        password:md5(req.body.password)
       });
       newUser.save(function(err){
         if(err){
