@@ -5,7 +5,8 @@ const bodyParser=require("body-parser");
 const ejs=require("ejs");
 const app=express();
 const mongoose=require("mongoose");
-const md5 =require("md5");
+const bcrypt =require("bcrypt");
+const saltRounds=8;
 
 app.use(express.static("public"));
 app.set("view engine","ejs");
@@ -29,13 +30,17 @@ app.route("/login")
   res.render("login");
 })
 .post(function(req,res){
+  const username=req.body.username;
+  const password=req.body.password;
   User.findOne(
-    {email:req.body.username},
+    {email:username},
     function(err,foundUser){
       if(!err){
-        if(foundUser.password===md5(req.body.password)){
-          res.render("secrets");
-        }
+        bcrypt.compare(password, foundUser.password, function(err, result) {
+          if(result){
+            res.render("secrets");
+          }
+        });
       }
       else{
           console.log(err);
@@ -44,29 +49,32 @@ app.route("/login")
 });
 app.route("/register")
 .get(function(req,res){
-  res.render("register");
+  res.render("register",{alreadyExists:""});
 })
 .post(function(req,res){
-  User.findOne({email:req.body.username},function(err,foundUser){
+  const username=req.body.username;
+  const password=req.body.password;
+  User.findOne({email:username},function(err,foundUser){
     if(foundUser){
-
+      res.render("register",{alreadyExists:"This email is already registered. Please try logging in instead."})
     }
     else{
-      const newUser=new User({
-        email:req.body.username,
-        password:md5(req.body.password)
-      });
-      newUser.save(function(err){
-        if(err){
-          console.log(err);
-        }
-        else{
-          res.render("secrets");
-        }
+      bcrypt.hash(password, saltRounds, function(err, hash) {
+        const newUser=new User({
+          email:username,
+          password:hash
+        });
+        newUser.save(function(err){
+          if(err){
+            console.log(err);
+          }
+          else{
+            res.render("secrets");
+          }
+        });
       });
     }
   });
-
 });
 
 app.listen(3000,()=>{
